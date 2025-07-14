@@ -28,6 +28,8 @@ import (
 
 const moduleFileName = "go.mod"
 
+const GXModulePath = "github.com/gx-org/gx"
+
 func findModuleRoot(dir string) (roots string) {
 	dir = filepath.Clean(dir)
 	if dir == "" {
@@ -173,4 +175,13 @@ func (mod *Module) GXPathFromOS(osPath string) (string, error) {
 	}
 	pkgPath := strings.TrimPrefix(absPath, mod.root+"/")
 	return filepath.Join(mod.name, pkgPath), nil
+}
+
+func (mod *Module) GXVersion() string {
+	for _, req := range mod.mod.Require {
+		if req.Mod.Path == GXModulePath {
+			return req.Mod.Version
+		}
+	}
+	return ""
 }

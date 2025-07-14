@@ -16,7 +16,11 @@
 package bind
 
 import (
+	"ccgx/internal/gotc"
 	"ccgx/internal/gxtc"
+	"ccgx/internal/module"
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -29,12 +33,37 @@ var Cmd = &cobra.Command{
 	RunE:  cBind,
 }
 
+func installLinkToGX(targetPath string) error {
+	mod, err := module.Current()
+	if err != nil {
+		return err
+	}
+	gxVersion := mod.GXVersion()
+	if gxVersion == "" {
+		return fmt.Errorf("cannot find GX version")
+	}
+	gxModPath, err := gotc.ModuleOSPath(module.GXModulePath, gxVersion)
+	if err != nil {
+		return err
+	}
+	return os.Symlink(gxModPath, filepath.Join(targetPath, "gx"))
+}
+
 func cBind(cmd *cobra.Command, args []string) error {
 	mod, pkgs, err := gxtc.Packages()
 	if err != nil {
 		return err
 	}
+	if len(pkgs) == 0 {
+		return nil
+	}
 	depsPath := filepath.Join(mod.Path(), "gxdeps")
+	if err := os.MkdirAll(depsPath, 0755); err != nil {
+		return err
+	}
+	if err := installLinkToGX(depsPath); err != nil {
+		return err
+	}
 	for _, pkg := range pkgs {
 		target := filepath.Join(depsPath, pkg)
 		if err := gxtc.Bind(pkg, target); err != nil {

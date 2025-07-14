@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 // Check that Go is installed.
@@ -44,4 +46,46 @@ func ModTidy() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+const goModCache = "GOMODCACHE"
+
+func modCachePath() (string, error) {
+	cmd := exec.Command("go", "env")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	for line := range strings.Lines(string(out)) {
+		spLine := strings.Split(line, "=")
+		if len(spLine) != 2 {
+			continue
+		}
+		if spLine[0] != goModCache {
+			continue
+		}
+		cachePath := strings.TrimSpace(spLine[1])
+		cachePath = strings.TrimPrefix(cachePath, "'")
+		cachePath = strings.TrimSuffix(cachePath, "'")
+		return cachePath, nil
+	}
+	return "", fmt.Errorf("Go variable environment %s not found", goModCache)
+}
+
+// ModuleOSPath returns the OS path of a given module path and its version.
+func ModuleOSPath(modPath, version string) (string, error) {
+	modCache, err := modCachePath()
+	if err != nil {
+		return "", err
+	}
+	dir, file := filepath.Split(modPath)
+	modCache = filepath.Join(modCache, dir, fmt.Sprintf("%s@%s", file, version))
+	dirStat, err := os.Stat(modCache)
+	if err != nil {
+		return "", fmt.Errorf("cannot find GX module path at %s: %v\nPlease run ccgx tidy.\n", modCache, err)
+	}
+	if !dirStat.IsDir() {
+		return "", fmt.Errorf("%s not a directory: %v\nPlease run ccgx tidy.\n", modCache, err)
+	}
+	return modCache, nil
 }

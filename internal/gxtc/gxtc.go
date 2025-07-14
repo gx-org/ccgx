@@ -17,6 +17,7 @@ package gxtc
 
 import (
 	"ccgx/internal/module"
+	"fmt"
 	"io/fs"
 	"maps"
 	"os"
@@ -50,8 +51,24 @@ func (fls *gxFiles) visit(path string, dir fs.DirEntry, err error) error {
 	return nil
 }
 
+func gxVersion() (string, error) {
+	mod, err := module.Current()
+	if err != nil {
+		return "", err
+	}
+	version := mod.GXVersion()
+	if version == "" {
+		return "", fmt.Errorf("unknown GX version")
+	}
+	return version, nil
+}
+
 func gxCommand(gxcmd string, args ...string) error {
-	osArgs := []string{"run", gxcmd + "@main"}
+	version, err := gxVersion()
+	if err != nil {
+		return nil
+	}
+	osArgs := []string{"run", gxcmd + "@" + version}
 	osArgs = append(osArgs, args...)
 	cmd := exec.Command("go", osArgs...)
 	cmd.Stdout = os.Stdout
