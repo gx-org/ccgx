@@ -12,19 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+// Package bind provides the Cobra bind command
+package bind
 
 import (
-	"ccgx/internal/cmd"
-	"ccgx/internal/gotc"
-	"fmt"
-	"os"
+	"ccgx/internal/gxtc"
+	"path/filepath"
+
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	if err := gotc.Check(); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-		os.Exit(1)
+// Cmd is the implementation of the mod command.
+var Cmd = &cobra.Command{
+	Use:   "bind",
+	Short: "Generate C++ header files",
+	RunE:  cBind,
+}
+
+func cBind(cmd *cobra.Command, args []string) error {
+	mod, pkgs, err := gxtc.Packages()
+	if err != nil {
+		return err
 	}
-	cmd.Execute()
+	depsPath := filepath.Join(mod.Path(), "gxdeps")
+	for _, pkg := range pkgs {
+		target := filepath.Join(depsPath, pkg)
+		if err := gxtc.Bind(pkg, target); err != nil {
+			return err
+		}
+	}
+	return nil
 }
