@@ -12,6 +12,7 @@ import (
 	"github.com/gx-org/gx/build/builder"
 	"github.com/gx-org/gx/build/importers/embedpkg"
 
+	_ "github.com/gx-org/xlapjrt/gx"
 )
 
 //go:embed helloworld.gx 

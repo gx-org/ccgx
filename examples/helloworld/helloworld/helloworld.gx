@@ -1,6 +1,7 @@
 package helloworld
 
 import "shapes"
+import _ "github.com/gx-org/xlapjrt/gx"
 
 // Hello returns a constant array of two axes of size 2 and 3.
 func Hello() [2][3]float32 {
