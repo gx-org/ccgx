@@ -16,9 +16,11 @@
 package gxtc
 
 import (
+	"ccgx/internal/cmd/debug"
 	"ccgx/internal/module"
 	"fmt"
 	"io/fs"
+	"log"
 	"maps"
 	"os"
 	"os/exec"
@@ -70,6 +72,10 @@ func gxCommand(gxcmd string, args ...string) error {
 	}
 	osArgs := []string{"run", gxcmd + "@" + version}
 	osArgs = append(osArgs, args...)
+	if debug.Debug {
+		cmdS := append([]string{"DEBUG", "go"}, osArgs...)
+		log.Println(strings.Join(cmdS, " "))
+	}
 	cmd := exec.Command("go", osArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

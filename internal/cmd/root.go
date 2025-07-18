@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"ccgx/internal/cmd/bind"
+	"ccgx/internal/cmd/debug"
 	"ccgx/internal/cmd/mod"
 
 	"github.com/spf13/cobra"
@@ -34,6 +35,7 @@ func Execute() error {
 }
 
 func init() {
+	rootCmd.PersistentFlags().BoolVarP(&debug.Debug, "debug", "d", false, "print debug information")
 	rootCmd.AddCommand(mod.Cmd)
-	rootCmd.AddCommand(bind.Cmd)
+	rootCmd.AddCommand(bind.Cmd())
 }

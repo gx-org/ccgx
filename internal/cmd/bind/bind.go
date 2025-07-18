@@ -27,10 +27,12 @@ import (
 )
 
 // Cmd is the implementation of the mod command.
-var Cmd = &cobra.Command{
-	Use:   "bind",
-	Short: "Generate C++ header files",
-	RunE:  cBind,
+func Cmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "bind",
+		Short: "Generate C++ header files",
+		RunE:  cBind,
+	}
 }
 
 func installLinkToGX(targetPath string) error {

@@ -25,5 +25,5 @@ var Cmd = &cobra.Command{
 
 func init() {
 	Cmd.AddCommand(cmdInit())
-	Cmd.AddCommand(cmdTidy)
+	Cmd.AddCommand(cmdTidy())
 }
