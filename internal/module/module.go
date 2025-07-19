@@ -195,6 +195,6 @@ func (mod *Module) GXPathFromOS(osPath string) (string, error) {
 	if !info.IsDir() {
 		absPath = filepath.Dir(absPath)
 	}
-	pkgPath := strings.TrimPrefix(absPath, mod.root+"/")
+	pkgPath := strings.TrimPrefix(absPath, mod.root)
 	return filepath.Join(mod.name, pkgPath), nil
 }

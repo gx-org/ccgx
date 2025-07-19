@@ -15,20 +15,21 @@ import (
 	_ "github.com/gx-org/xlapjrt/gx"
 )
 
-//go:embed helloworld.gx 
+//go:embed helloworld.gx
 var srcs embed.FS
 
 var inputFiles = []string{
-"helloworld.gx",
+	"helloworld.gx",
 }
 
 func init() {
-	embedpkg.RegisterPackage("helloworld/helloworld", Build)
+	embedpkg.RegisterPackage("/helloworld", Build)
 }
 
 var _ embedpkg.BuildFunc = Build
 
 // Build GX package.
 func Build(bld *builder.Builder) (builder.Package, error) {
-	return bld.BuildFiles("helloworld", "helloworld", srcs, inputFiles)
+	return bld.BuildFiles("", "helloworld", srcs, inputFiles)
 }
+
