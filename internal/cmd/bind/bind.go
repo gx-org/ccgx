@@ -18,12 +18,12 @@ package bind
 import (
 	"ccgx/internal/gotc"
 	"ccgx/internal/gxtc"
-	"ccgx/internal/module"
-	"fmt"
+	gxmodule "ccgx/internal/module"
 	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/module"
 )
 
 // Cmd is the implementation of the mod command.
@@ -35,24 +35,21 @@ func Cmd() *cobra.Command {
 	}
 }
 
-func installLinkToGX(targetPath string) error {
-	mod, err := module.Current()
+func installLinkToModule(mod *gxmodule.Module, targetPath string, dep *module.Version) error {
+	gxModPath, err := gotc.ModuleOSPath(dep)
 	if err != nil {
 		return err
 	}
-	gxVersion := mod.GXVersion()
-	if gxVersion == "" {
-		return fmt.Errorf("cannot find GX version")
-	}
-	gxModPath, err := gotc.ModuleOSPath(module.GXModulePath, gxVersion)
-	if err != nil {
+	targetLink := filepath.Join(targetPath, dep.Path)
+	folder := filepath.Dir(targetLink)
+	if err := os.MkdirAll(folder, 0755); err != nil {
 		return err
 	}
-	return os.Symlink(gxModPath, filepath.Join(targetPath, "gx"))
+	return os.Symlink(gxModPath, targetLink)
 }
 
 func cBind(cmd *cobra.Command, args []string) error {
-	mod, err := module.Current()
+	mod, err := gxmodule.Current()
 	if err != nil {
 		return err
 	}
@@ -67,8 +64,10 @@ func cBind(cmd *cobra.Command, args []string) error {
 	if err := os.MkdirAll(depsPath, 0755); err != nil {
 		return err
 	}
-	if err := installLinkToGX(depsPath); err != nil {
-		return err
+	for _, dep := range mod.Deps() {
+		if err := installLinkToModule(mod, depsPath, dep); err != nil {
+			return err
+		}
 	}
 	for _, pkg := range pkgs {
 		target := filepath.Join(depsPath, pkg)

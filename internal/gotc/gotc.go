@@ -21,6 +21,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/mod/module"
 )
 
 // Check that Go is installed.
@@ -73,13 +75,13 @@ func modCachePath() (string, error) {
 }
 
 // ModuleOSPath returns the OS path of a given module path and its version.
-func ModuleOSPath(modPath, version string) (string, error) {
+func ModuleOSPath(mod *module.Version) (string, error) {
 	modCache, err := modCachePath()
 	if err != nil {
 		return "", err
 	}
-	dir, file := filepath.Split(modPath)
-	modCache = filepath.Join(modCache, dir, fmt.Sprintf("%s@%s", file, version))
+	dir, file := filepath.Split(mod.Path)
+	modCache = filepath.Join(modCache, dir, fmt.Sprintf("%s@%s", file, mod.Version))
 	dirStat, err := os.Stat(modCache)
 	if err != nil {
 		return "", fmt.Errorf("cannot find GX module path at %s: %v\nPlease run ccgx tidy.\n", modCache, err)

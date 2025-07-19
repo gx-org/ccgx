@@ -17,13 +17,12 @@ package gxtc
 
 import (
 	"ccgx/internal/cmd/debug"
+	"ccgx/internal/exec"
 	"ccgx/internal/module"
-	"fmt"
 	"io/fs"
 	"log"
 	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -53,18 +52,10 @@ func (fls *gxFiles) visit(path string, dir fs.DirEntry, err error) error {
 	return nil
 }
 
-func gxVersion(mod *module.Module) (string, error) {
-	version := mod.GXVersion()
-	if version == "" {
-		return "", fmt.Errorf("unknown GX version")
-	}
-	return version, nil
-}
-
 func gxCommand(mod *module.Module, gxcmd string, args ...string) error {
-	version, err := gxVersion(mod)
-	if err != nil {
-		return nil
+	version := mod.VersionOf("github.com/gx-org/gx")
+	if version == "" {
+		version = "latest"
 	}
 	osArgs := []string{"run", gxcmd + "@" + version}
 	osArgs = append(osArgs, args...)

@@ -24,11 +24,10 @@ import (
 	"sync"
 
 	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/module"
 )
 
 const moduleFileName = "go.mod"
-
-const GXModulePath = "github.com/gx-org/gx"
 
 func findModuleRoot(dir string) (roots string) {
 	dir = filepath.Clean(dir)
@@ -128,6 +127,29 @@ func (mod *Module) Belongs(importPath string) bool {
 	return strings.HasPrefix(importPath, mod.name)
 }
 
+// Deps returns a list of all the direct dependencies.
+func (mod *Module) Deps() []*module.Version {
+	var deps []*module.Version
+	for _, dep := range mod.mod.Require {
+		if dep.Indirect {
+			continue
+		}
+		deps = append(deps, &dep.Mod)
+	}
+	return deps
+}
+
+// VersionOf returns the version of a given module path
+// or an empty string if not found.
+func (mod *Module) VersionOf(path string) string {
+	for _, dep := range mod.Deps() {
+		if dep.Path == path {
+			return dep.Version
+		}
+	}
+	return ""
+}
+
 func (mod *Module) checkBelong(importPath string) error {
 	if !mod.Belongs(importPath) {
 		return fmt.Errorf("package %q does not belong to %s", importPath, mod.name)
@@ -175,13 +197,4 @@ func (mod *Module) GXPathFromOS(osPath string) (string, error) {
 	}
 	pkgPath := strings.TrimPrefix(absPath, mod.root+"/")
 	return filepath.Join(mod.name, pkgPath), nil
-}
-
-func (mod *Module) GXVersion() string {
-	for _, req := range mod.mod.Require {
-		if req.Mod.Path == GXModulePath {
-			return req.Mod.Version
-		}
-	}
-	return ""
 }
