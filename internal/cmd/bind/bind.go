@@ -52,7 +52,11 @@ func installLinkToGX(targetPath string) error {
 }
 
 func cBind(cmd *cobra.Command, args []string) error {
-	mod, pkgs, err := gxtc.Packages()
+	mod, err := module.Current()
+	if err != nil {
+		return err
+	}
+	pkgs, err := gxtc.Packages(mod)
 	if err != nil {
 		return err
 	}
@@ -68,7 +72,7 @@ func cBind(cmd *cobra.Command, args []string) error {
 	}
 	for _, pkg := range pkgs {
 		target := filepath.Join(depsPath, pkg)
-		if err := gxtc.Bind(pkg, target); err != nil {
+		if err := gxtc.Bind(mod, pkg, target); err != nil {
 			return err
 		}
 	}

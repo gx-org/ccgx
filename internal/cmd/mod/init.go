@@ -17,8 +17,7 @@ package mod
 import (
 	"ccgx/internal/gotc"
 	"ccgx/internal/gxtc"
-	"fmt"
-	"path/filepath"
+	"ccgx/internal/module"
 
 	"github.com/spf13/cobra"
 )
@@ -35,14 +34,14 @@ func cmdInit() *cobra.Command {
 }
 
 func cInit(cmd *cobra.Command, args []string) error {
-	path, err := filepath.Abs(".")
-	if err != nil {
-		return fmt.Errorf("invalid current folder: %v", err)
-	}
 	if err := gotc.ModInit(args[0]); err != nil {
 		return err
 	}
-	if err := gxtc.PackAll(path); err != nil {
+	mod, err := module.Current()
+	if err != nil {
+		return err
+	}
+	if err := gxtc.PackAll(mod); err != nil {
 		return err
 	}
 	if err := gotc.ModTidy(); err != nil {

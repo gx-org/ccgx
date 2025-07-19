@@ -53,11 +53,7 @@ func (fls *gxFiles) visit(path string, dir fs.DirEntry, err error) error {
 	return nil
 }
 
-func gxVersion() (string, error) {
-	mod, err := module.Current()
-	if err != nil {
-		return "", err
-	}
+func gxVersion(mod *module.Module) (string, error) {
 	version := mod.GXVersion()
 	if version == "" {
 		return "", fmt.Errorf("unknown GX version")
@@ -65,8 +61,8 @@ func gxVersion() (string, error) {
 	return version, nil
 }
 
-func gxCommand(gxcmd string, args ...string) error {
-	version, err := gxVersion()
+func gxCommand(mod *module.Module, gxcmd string, args ...string) error {
+	version, err := gxVersion(mod)
 	if err != nil {
 		return nil
 	}
@@ -83,13 +79,13 @@ func gxCommand(gxcmd string, args ...string) error {
 }
 
 // Pack a GX package.
-func Pack(path string) error {
-	return gxCommand("github.com/gx-org/gx/golang/packager", "--gx_package_module="+path)
+func Pack(mod *module.Module, path string) error {
+	return gxCommand(mod, "github.com/gx-org/gx/golang/packager", "--gx_package_module="+path)
 }
 
 // Bind a GX package by generating C++ header files to a given target.
-func Bind(path, target string) error {
-	return gxCommand("github.com/gx-org/gx/golang/binder/genbind",
+func Bind(mod *module.Module, path, target string) error {
+	return gxCommand(mod, "github.com/gx-org/gx/golang/binder/genbind",
 		"--language=cc",
 		"--gx_package="+path,
 		"--target_folder="+target,
@@ -97,28 +93,24 @@ func Bind(path, target string) error {
 }
 
 // Packages returns the list of GX packages in the current module.
-func Packages() (*module.Module, []string, error) {
-	mod, err := module.Current()
-	if err != nil {
-		return nil, nil, err
-	}
+func Packages(mod *module.Module) ([]string, error) {
 	files := gxFiles{mod: mod, list: make(map[string]bool)}
 	if err := filepath.WalkDir(mod.Path(), files.visit); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	pkgs := slices.Collect(maps.Keys(files.list))
 	sort.Strings(pkgs)
-	return mod, pkgs, nil
+	return pkgs, nil
 }
 
 // PackAll looks for all GX packages and generates a matching Go package to encapsulte the GX source code.
-func PackAll(root string) error {
-	_, pkgs, err := Packages()
+func PackAll(mod *module.Module) error {
+	pkgs, err := Packages(mod)
 	if err != nil {
 		return err
 	}
 	for _, pkg := range pkgs {
-		if err := Pack(pkg); err != nil {
+		if err := Pack(mod, pkg); err != nil {
 			return err
 		}
 	}
