@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/gx-org/gx v0.3.1
-	github.com/gx-org/xlapjrt v0.2.0
+	github.com/gx-org/xlapjrt v0.2.1
 )
 
 require (
