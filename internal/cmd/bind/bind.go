@@ -35,8 +35,8 @@ func Cmd() *cobra.Command {
 	}
 }
 
-func installLinkToModule(mod *gxmodule.Module, targetPath string, dep *module.Version) error {
-	gxModPath, err := gotc.ModuleOSPath(dep)
+func installLinkToModule(cache *gotc.Cache, targetPath string, dep *module.Version) error {
+	gxModPath, err := cache.OSPath(dep)
 	if err != nil {
 		return err
 	}
@@ -45,14 +45,20 @@ func installLinkToModule(mod *gxmodule.Module, targetPath string, dep *module.Ve
 	if err := os.MkdirAll(folder, 0755); err != nil {
 		return err
 	}
-	if err := os.Remove(targetLink); err != nil {
-		return err
+	if _, err := os.Stat(targetLink); err == nil {
+		if err := os.Remove(targetLink); err != nil {
+			return err
+		}
 	}
 	return os.Symlink(gxModPath, targetLink)
 }
 
 func cBind(cmd *cobra.Command, args []string) error {
 	mod, err := gxmodule.Current()
+	if err != nil {
+		return err
+	}
+	goCache, err := gotc.NewCache()
 	if err != nil {
 		return err
 	}
@@ -68,7 +74,7 @@ func cBind(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	for _, dep := range mod.Deps() {
-		if err := installLinkToModule(mod, depsPath, dep); err != nil {
+		if err := installLinkToModule(goCache, depsPath, dep); err != nil {
 			return err
 		}
 	}

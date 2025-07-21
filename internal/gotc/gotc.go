@@ -52,11 +52,17 @@ func ModTidy() error {
 
 const goModCache = "GOMODCACHE"
 
-func modCachePath() (string, error) {
+// Cache stores the path where Go caches modules.
+type Cache struct {
+	path string
+}
+
+// NewCache reads where Go caches modules.
+func NewCache() (*Cache, error) {
 	cmd := exec.Command("go", "env")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for line := range strings.Lines(string(out)) {
 		spLine := strings.Split(line, "=")
@@ -69,19 +75,15 @@ func modCachePath() (string, error) {
 		cachePath := strings.TrimSpace(spLine[1])
 		cachePath = strings.TrimPrefix(cachePath, "'")
 		cachePath = strings.TrimSuffix(cachePath, "'")
-		return cachePath, nil
+		return &Cache{path: cachePath}, nil
 	}
-	return "", fmt.Errorf("Go variable environment %s not found", goModCache)
+	return nil, fmt.Errorf("Go variable environment %s not found", goModCache)
 }
 
 // ModuleOSPath returns the OS path of a given module path and its version.
-func ModuleOSPath(mod *module.Version) (string, error) {
-	modCache, err := modCachePath()
-	if err != nil {
-		return "", err
-	}
+func (cache *Cache) OSPath(mod *module.Version) (string, error) {
 	dir, file := filepath.Split(mod.Path)
-	modCache = filepath.Join(modCache, dir, fmt.Sprintf("%s@%s", file, mod.Version))
+	modCache := filepath.Join(cache.path, dir, fmt.Sprintf("%s@%s", file, mod.Version))
 	dirStat, err := os.Stat(modCache)
 	if err != nil {
 		return "", fmt.Errorf("cannot find GX module path at %s: %v\nPlease run ccgx tidy.\n", modCache, err)

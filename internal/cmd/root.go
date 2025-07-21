@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 	Use:           "ccgx",
 	Short:         "Generate C++ bindings for GX.",
 	SilenceUsage:  true,
-	SilenceErrors: true,
+	SilenceErrors: false,
 }
 
 // Execute executes the root command.
