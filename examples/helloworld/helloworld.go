@@ -15,11 +15,11 @@ import (
 	_ "github.com/gx-org/xlapjrt/gx"
 )
 
-//go:embed helloworld.gx
+//go:embed helloworld.gx 
 var srcs embed.FS
 
 var inputFiles = []string{
-	"helloworld.gx",
+"helloworld.gx",
 }
 
 func init() {
@@ -32,4 +32,3 @@ var _ embedpkg.BuildFunc = Build
 func Build(bld *builder.Builder) (builder.Package, error) {
 	return bld.BuildFiles("", "helloworld", srcs, inputFiles)
 }
-
