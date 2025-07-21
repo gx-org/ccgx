@@ -45,6 +45,9 @@ func installLinkToModule(mod *gxmodule.Module, targetPath string, dep *module.Ve
 	if err := os.MkdirAll(folder, 0755); err != nil {
 		return err
 	}
+	if err := os.Remove(targetLink); err != nil {
+		return err
+	}
 	return os.Symlink(gxModPath, targetLink)
 }
 
