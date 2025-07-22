@@ -18,7 +18,8 @@ package gxtc
 import (
 	"ccgx/internal/cmd/debug"
 	"ccgx/internal/exec"
-	"ccgx/internal/module"
+	"ccgx/internal/gotc"
+	gxmodule "ccgx/internal/module"
 	"io/fs"
 	"log"
 	"maps"
@@ -27,10 +28,12 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"golang.org/x/mod/module"
 )
 
 type gxFiles struct {
-	mod  *module.Module
+	mod  *gxmodule.Module
 	list map[string]bool
 }
 
@@ -52,7 +55,7 @@ func (fls *gxFiles) visit(path string, dir fs.DirEntry, err error) error {
 	return nil
 }
 
-func gxCommand(mod *module.Module, gxcmd string, args ...string) error {
+func gxCommand(mod *gxmodule.Module, gxcmd string, args ...string) error {
 	version := mod.VersionOf("github.com/gx-org/gx")
 	if version == "" {
 		version = "latest"
@@ -70,12 +73,12 @@ func gxCommand(mod *module.Module, gxcmd string, args ...string) error {
 }
 
 // Pack a GX package.
-func Pack(mod *module.Module, path string) error {
+func Pack(mod *gxmodule.Module, path string) error {
 	return gxCommand(mod, "github.com/gx-org/gx/golang/packager", "--gx_package_module="+path)
 }
 
 // Bind a GX package by generating C++ header files to a given target.
-func Bind(mod *module.Module, path, target string) error {
+func Bind(mod *gxmodule.Module, path, target string) error {
 	return gxCommand(mod, "github.com/gx-org/gx/golang/binder/genbind",
 		"--language=cc",
 		"--gx_package="+path,
@@ -84,7 +87,7 @@ func Bind(mod *module.Module, path, target string) error {
 }
 
 // Packages returns the list of GX packages in the current module.
-func Packages(mod *module.Module) ([]string, error) {
+func Packages(mod *gxmodule.Module) ([]string, error) {
 	files := gxFiles{mod: mod, list: make(map[string]bool)}
 	if err := filepath.WalkDir(mod.Path(), files.visit); err != nil {
 		return nil, err
@@ -95,7 +98,7 @@ func Packages(mod *module.Module) ([]string, error) {
 }
 
 // PackAll looks for all GX packages and generates a matching Go package to encapsulte the GX source code.
-func PackAll(mod *module.Module) error {
+func PackAll(mod *gxmodule.Module) error {
 	pkgs, err := Packages(mod)
 	if err != nil {
 		return err
@@ -106,4 +109,37 @@ func PackAll(mod *module.Module) error {
 		}
 	}
 	return nil
+}
+
+func installLinkToModule(cache *gotc.Cache, targetPath string, dep *module.Version) error {
+	gxModPath, err := cache.OSPath(dep)
+	if err != nil {
+		return err
+	}
+	targetLink := filepath.Join(targetPath, dep.Path)
+	folder := filepath.Dir(targetLink)
+	if err := os.MkdirAll(folder, 0755); err != nil {
+		return err
+	}
+	if _, err := os.Stat(targetLink); err == nil {
+		if err := os.Remove(targetLink); err != nil {
+			return err
+		}
+	}
+	return os.Symlink(gxModPath, targetLink)
+}
+
+// LinkAllDeps creates links to dependencies.
+// Returns the path where the links where created.
+func LinkAllDeps(mod *gxmodule.Module, cache *gotc.Cache) (string, error) {
+	depsPath := filepath.Join(mod.Path(), "gxdeps")
+	if err := os.MkdirAll(depsPath, 0755); err != nil {
+		return "", err
+	}
+	for _, dep := range mod.Deps() {
+		if err := installLinkToModule(cache, depsPath, dep); err != nil {
+			return "", err
+		}
+	}
+	return depsPath, nil
 }

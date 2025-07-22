@@ -12,32 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+// Package bind provides the Cobra bind command
+package link
 
 import (
-	"ccgx/internal/cmd/bind"
-	"ccgx/internal/cmd/debug"
-	"ccgx/internal/cmd/link"
-	"ccgx/internal/cmd/mod"
+	"ccgx/internal/gotc"
+	"ccgx/internal/gxtc"
+	gxmodule "ccgx/internal/module"
 
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:           "ccgx",
-	Short:         "Generate C++ bindings for GX.",
-	SilenceUsage:  true,
-	SilenceErrors: false,
+// Cmd is the implementation of the mod command.
+func Cmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "link",
+		Short: "Link dependencies, then generate C++ header files",
+		RunE:  cLink,
+	}
 }
 
-// Execute executes the root command.
-func Execute() error {
-	return rootCmd.Execute()
-}
-
-func init() {
-	rootCmd.PersistentFlags().BoolVarP(&debug.Debug, "debug", "d", false, "print debug information")
-	rootCmd.AddCommand(mod.Cmd)
-	rootCmd.AddCommand(link.Cmd())
-	rootCmd.AddCommand(bind.Cmd())
+func cLink(cmd *cobra.Command, args []string) error {
+	mod, err := gxmodule.Current()
+	if err != nil {
+		return err
+	}
+	cache, err := gotc.NewCache()
+	if err != nil {
+		return err
+	}
+	_, err = gxtc.LinkAllDeps(mod, cache)
+	return err
 }

@@ -19,38 +19,18 @@ import (
 	"ccgx/internal/gotc"
 	"ccgx/internal/gxtc"
 	gxmodule "ccgx/internal/module"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/module"
 )
 
 // Cmd is the implementation of the mod command.
 func Cmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "bind",
-		Short: "Generate C++ header files",
+		Short: "Create links to dependencies, then generate C++ header files",
 		RunE:  cBind,
 	}
-}
-
-func installLinkToModule(cache *gotc.Cache, targetPath string, dep *module.Version) error {
-	gxModPath, err := cache.OSPath(dep)
-	if err != nil {
-		return err
-	}
-	targetLink := filepath.Join(targetPath, dep.Path)
-	folder := filepath.Dir(targetLink)
-	if err := os.MkdirAll(folder, 0755); err != nil {
-		return err
-	}
-	if _, err := os.Stat(targetLink); err == nil {
-		if err := os.Remove(targetLink); err != nil {
-			return err
-		}
-	}
-	return os.Symlink(gxModPath, targetLink)
 }
 
 func cBind(cmd *cobra.Command, args []string) error {
@@ -58,7 +38,11 @@ func cBind(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	goCache, err := gotc.NewCache()
+	cache, err := gotc.NewCache()
+	if err != nil {
+		return err
+	}
+	depsPath, err := gxtc.LinkAllDeps(mod, cache)
 	if err != nil {
 		return err
 	}
@@ -68,15 +52,6 @@ func cBind(cmd *cobra.Command, args []string) error {
 	}
 	if len(pkgs) == 0 {
 		return nil
-	}
-	depsPath := filepath.Join(mod.Path(), "gxdeps")
-	if err := os.MkdirAll(depsPath, 0755); err != nil {
-		return err
-	}
-	for _, dep := range mod.Deps() {
-		if err := installLinkToModule(goCache, depsPath, dep); err != nil {
-			return err
-		}
 	}
 	for _, pkg := range pkgs {
 		target := filepath.Join(depsPath, pkg)
