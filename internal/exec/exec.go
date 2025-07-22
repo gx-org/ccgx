@@ -2,10 +2,11 @@
 package exec
 
 import (
-	"ccgx/internal/cmd/debug"
 	"log"
 	"os/exec"
 	"strings"
+
+	"github.com/gx-org/ccgx/internal/cmd/debug"
 )
 
 // Command creates a new command.

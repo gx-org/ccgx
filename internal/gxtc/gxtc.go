@@ -16,10 +16,6 @@
 package gxtc
 
 import (
-	"ccgx/internal/cmd/debug"
-	"ccgx/internal/exec"
-	"ccgx/internal/gotc"
-	gxmodule "ccgx/internal/module"
 	"io/fs"
 	"log"
 	"maps"
@@ -29,6 +25,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gx-org/ccgx/internal/cmd/debug"
+	"github.com/gx-org/ccgx/internal/exec"
+	"github.com/gx-org/ccgx/internal/gotc"
+	gxmodule "github.com/gx-org/ccgx/internal/module"
 	"golang.org/x/mod/module"
 )
 

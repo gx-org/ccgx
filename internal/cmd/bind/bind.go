@@ -16,11 +16,11 @@
 package bind
 
 import (
-	"ccgx/internal/gotc"
-	"ccgx/internal/gxtc"
-	gxmodule "ccgx/internal/module"
 	"path/filepath"
 
+	"github.com/gx-org/ccgx/internal/gotc"
+	"github.com/gx-org/ccgx/internal/gxtc"
+	gxmodule "github.com/gx-org/ccgx/internal/module"
 	"github.com/spf13/cobra"
 )
 

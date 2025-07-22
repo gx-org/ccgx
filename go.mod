@@ -1,4 +1,4 @@
-module ccgx
+module github.com/gx-org/ccgx
 
 go 1.24.4
 

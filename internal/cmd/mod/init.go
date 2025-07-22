@@ -15,10 +15,9 @@
 package mod
 
 import (
-	"ccgx/internal/gotc"
-	"ccgx/internal/gxtc"
-	"ccgx/internal/module"
-
+	"github.com/gx-org/ccgx/internal/gotc"
+	"github.com/gx-org/ccgx/internal/gxtc"
+	"github.com/gx-org/ccgx/internal/module"
 	"github.com/spf13/cobra"
 )
 

@@ -15,10 +15,11 @@
 package main
 
 import (
-	"ccgx/internal/cmd"
-	"ccgx/internal/gotc"
 	"fmt"
 	"os"
+
+	"github.com/gx-org/ccgx/internal/cmd"
+	"github.com/gx-org/ccgx/internal/gotc"
 )
 
 func main() {

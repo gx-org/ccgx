@@ -15,11 +15,10 @@
 package cmd
 
 import (
-	"ccgx/internal/cmd/bind"
-	"ccgx/internal/cmd/debug"
-	"ccgx/internal/cmd/link"
-	"ccgx/internal/cmd/mod"
-
+	"github.com/gx-org/ccgx/internal/cmd/bind"
+	"github.com/gx-org/ccgx/internal/cmd/debug"
+	"github.com/gx-org/ccgx/internal/cmd/link"
+	"github.com/gx-org/ccgx/internal/cmd/mod"
 	"github.com/spf13/cobra"
 )
 
