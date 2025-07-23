@@ -132,6 +132,9 @@ func installLinkToModule(cache *gotc.Cache, targetPath string, dep *module.Versi
 // LinkAllDeps creates links to dependencies.
 // Returns the path where the links where created.
 func LinkAllDeps(mod *gxmodule.Module, cache *gotc.Cache) (string, error) {
+	if err := gotc.ModTidy(); err != nil {
+		return "", err
+	}
 	depsPath := filepath.Join(mod.Path(), "gxdeps")
 	if err := os.MkdirAll(depsPath, 0755); err != nil {
 		return "", err
