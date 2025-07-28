@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package bind provides the Cobra bind command
-package bind
+// Package carchive provides the Cobra carchive command.
+// The carchive command creates a carchive.go with all the Go/GX dependencies
+// to build a binary c archive that can be linked with the final executable.
+package carchive
 
 import (
-	"path/filepath"
-
-	"github.com/gx-org/ccgx/internal/gotc"
 	"github.com/gx-org/ccgx/internal/gxtc"
 	gxmodule "github.com/gx-org/ccgx/internal/module"
 	"github.com/spf13/cobra"
@@ -27,40 +26,21 @@ import (
 // Cmd is the implementation of the mod command.
 func Cmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "bind",
-		Short: "Create links to dependencies, then generate C++ header files",
-		RunE:  cBind,
+		Use:   "carchive",
+		Short: "Create a c archive",
+		Long:  "First, create a carchive.go file which includes all the Go/GX dependencies and a main function. This file is then compile using `go build -buildmode=c-archive` to produce a binary static .a library file.",
+		RunE:  cArchive,
 	}
 }
 
-func cBind(cmd *cobra.Command, args []string) error {
+func cArchive(cmd *cobra.Command, args []string) error {
 	mod, err := gxmodule.Current()
 	if err != nil {
 		return err
-	}
-	cache, err := gotc.NewCache()
-	if err != nil {
-		return err
-	}
-	if err := gxtc.LinkAllDeps(mod, cache); err != nil {
-		return err
-	}
-	pkgs, err := gxtc.Packages(mod)
-	if err != nil {
-		return err
-	}
-	if len(pkgs) == 0 {
-		return nil
 	}
 	depsPath, err := mod.DepsPath()
 	if err != nil {
 		return err
 	}
-	for _, pkg := range pkgs {
-		target := filepath.Join(depsPath, pkg)
-		if err := gxtc.Bind(mod, pkg, target); err != nil {
-			return err
-		}
-	}
-	return nil
+	return gxtc.CompileCArchive(mod, depsPath, "carchive")
 }

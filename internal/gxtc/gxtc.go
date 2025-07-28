@@ -16,6 +16,9 @@
 package gxtc
 
 import (
+	"fmt"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"log"
 	"maps"
@@ -23,6 +26,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gx-org/ccgx/internal/cmd/debug"
@@ -34,10 +38,10 @@ import (
 
 type gxFiles struct {
 	mod  *gxmodule.Module
-	list map[string]bool
+	list []string
 }
 
-func (fls *gxFiles) visit(path string, dir fs.DirEntry, err error) error {
+func (fls *gxFiles) collectGXDeps(path string, dir fs.DirEntry, err error) error {
 	if err != nil {
 		return err
 	}
@@ -51,7 +55,29 @@ func (fls *gxFiles) visit(path string, dir fs.DirEntry, err error) error {
 	if gxPath == "" {
 		return nil
 	}
-	fls.list[gxPath] = true
+	fls.list = append(fls.list, gxPath)
+	return nil
+}
+
+func (fls *gxFiles) collectGXImports(path string, dir fs.DirEntry, err error) error {
+	if err != nil {
+		return err
+	}
+	if !strings.HasSuffix(path, ".gx") {
+		return nil
+	}
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+	if err != nil {
+		return err
+	}
+	for _, imp := range file.Imports {
+		impPath, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			return fmt.Errorf("%s: import path %q is invalid: %v", path, imp.Path.Value, err)
+		}
+		fls.list = append(fls.list, impPath)
+	}
 	return nil
 }
 
@@ -86,13 +112,21 @@ func Bind(mod *gxmodule.Module, path, target string) error {
 	)
 }
 
+func unique(ss []string) []string {
+	m := make(map[string]bool)
+	for _, s := range ss {
+		m[s] = true
+	}
+	return slices.Collect(maps.Keys(m))
+}
+
 // Packages returns the list of GX packages in the current module.
 func Packages(mod *gxmodule.Module) ([]string, error) {
-	files := gxFiles{mod: mod, list: make(map[string]bool)}
-	if err := filepath.WalkDir(mod.Path(), files.visit); err != nil {
+	files := gxFiles{mod: mod}
+	if err := filepath.WalkDir(mod.Path(), files.collectGXDeps); err != nil {
 		return nil, err
 	}
-	pkgs := slices.Collect(maps.Keys(files.list))
+	pkgs := unique(files.list)
 	sort.Strings(pkgs)
 	return pkgs, nil
 }
@@ -131,18 +165,57 @@ func installLinkToModule(cache *gotc.Cache, targetPath string, dep *module.Versi
 
 // LinkAllDeps creates links to dependencies.
 // Returns the path where the links where created.
-func LinkAllDeps(mod *gxmodule.Module, cache *gotc.Cache) (string, error) {
+func LinkAllDeps(mod *gxmodule.Module, cache *gotc.Cache) error {
 	if err := gotc.ModTidy(); err != nil {
-		return "", err
+		return err
 	}
-	depsPath := filepath.Join(mod.Path(), "gxdeps")
-	if err := os.MkdirAll(depsPath, 0755); err != nil {
-		return "", err
+	depsPath, err := mod.DepsPath()
+	if err != nil {
+		return err
 	}
 	for _, dep := range mod.Deps() {
 		if err := installLinkToModule(cache, depsPath, dep); err != nil {
-			return "", err
+			return err
 		}
 	}
-	return depsPath, nil
+	return err
+}
+
+func writeGoSource(path, name string, files *gxFiles) (string, error) {
+	deps := unique(files.list)
+	var imports strings.Builder
+	for _, dep := range deps {
+		if !strings.HasPrefix(dep, "github.com") {
+			continue
+		}
+		fmt.Fprintf(&imports, "import _ %s\n", strconv.Quote(dep))
+	}
+	cArchiveSource := fmt.Sprintf(`package main
+
+%s
+
+func main() {}
+`, imports.String())
+	srcFile := filepath.Join(path, name+".go")
+	return srcFile, os.WriteFile(srcFile, []byte(cArchiveSource), 0644)
+}
+
+// CompileCArchive creates a Go file with all the GX/Go dependencies and
+// a main function. This file is then compiled into a static binary C library.
+func CompileCArchive(mod *gxmodule.Module, path, name string) error {
+	files := gxFiles{
+		mod: mod,
+		list: []string{
+			"github.com/gx-org/gx/golang/binder/cgx",
+		},
+	}
+	if err := filepath.WalkDir(mod.Path(), files.collectGXImports); err != nil {
+		return err
+	}
+	src, err := writeGoSource(path, name, &files)
+	if err != nil {
+		return err
+	}
+	filePath := filepath.Join(path, name+".a")
+	return gotc.BuildArchive(src, filePath)
 }

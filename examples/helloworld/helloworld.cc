@@ -6,9 +6,10 @@
 #include "gxdeps/github.com/gx-org/xlapjrt/cgx/cgx.cgo.h"
 #include "gxdeps/helloworld_go_gx.h"
 
-using std::begin;
 using gxlang::cppgx::Runtime;
 using gxlang::cppgx::ToErrorStatus;
+using helloworld::Helloworld;
+using std::begin;
 
 absl::StatusOr<Runtime> NewRuntime() {
   const auto bld(cgx_builder_new_static_xlapjrt());
@@ -19,9 +20,6 @@ absl::StatusOr<Runtime> NewRuntime() {
   return Runtime(result.runtime);
 }
 
-namespace helloworld {
-namespace {
-
 int main() {
   auto runtime(NewRuntime());
   if (!runtime.ok()) {
@@ -29,12 +27,12 @@ int main() {
     return 1;
   }
   auto device(runtime->GetDevice(0));
-  if (!runtime.ok()) {
+  if (!device.ok()) {
     std::cerr << "cannot create device: " << device.status() << std::endl;
     return 1;
   }
   auto package(Helloworld::BuildFor(device.value()));
-  if (!runtime.ok()) {
+  if (!package.ok()) {
     std::cerr << "cannot compile package: " << package.status() << std::endl;
     return 1;
   }
@@ -48,11 +46,8 @@ int main() {
   }
   std::cout << "Hello: [ ";
   for (float value : data.value()) {
-        std::cout << value << " ";
+    std::cout << value << " ";
   }
   std::cout << "]" << std::endl;
   return 0;
 }
-
-} // namespace
-} // namespace githubcom::gxorg::ccgx::examples::helloworld

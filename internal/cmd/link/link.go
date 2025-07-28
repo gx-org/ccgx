@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package bind provides the Cobra bind command
+// Package link provides the Cobra link command.
+// The link command creates symbolic links to all the project GX dependencies.
 package link
 
 import (
@@ -40,6 +41,5 @@ func cLink(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, err = gxtc.LinkAllDeps(mod, cache)
-	return err
+	return gxtc.LinkAllDeps(mod, cache)
 }

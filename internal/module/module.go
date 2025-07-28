@@ -198,3 +198,13 @@ func (mod *Module) GXPathFromOS(osPath string) (string, error) {
 	pkgPath := strings.TrimPrefix(absPath, mod.root)
 	return filepath.Join(mod.name, pkgPath), nil
 }
+
+// DepsPath returns the path where dependencies are linked.
+// It is created if it does not exist.
+func (mod *Module) DepsPath() (string, error) {
+	depsPath := filepath.Join(mod.Path(), "gxdeps")
+	if err := os.MkdirAll(depsPath, 0755); err != nil {
+		return "", err
+	}
+	return depsPath, nil
+}

@@ -93,3 +93,14 @@ func (cache *Cache) OSPath(mod *module.Version) (string, error) {
 	}
 	return modCache, nil
 }
+
+func BuildArchive(src, target string) error {
+	cmd := exec.Command("go", "build",
+		"-buildmode=c-archive",
+		"-o",
+		target,
+		src)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}

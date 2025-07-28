@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"github.com/gx-org/ccgx/internal/cmd/bind"
+	"github.com/gx-org/ccgx/internal/cmd/carchive"
 	"github.com/gx-org/ccgx/internal/cmd/debug"
 	"github.com/gx-org/ccgx/internal/cmd/link"
 	"github.com/gx-org/ccgx/internal/cmd/mod"
@@ -39,4 +40,5 @@ func init() {
 	rootCmd.AddCommand(mod.Cmd)
 	rootCmd.AddCommand(link.Cmd())
 	rootCmd.AddCommand(bind.Cmd())
+	rootCmd.AddCommand(carchive.Cmd())
 }
