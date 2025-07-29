@@ -94,12 +94,29 @@ func (cache *Cache) OSPath(mod *module.Version) (string, error) {
 	return modCache, nil
 }
 
-func BuildArchive(src, target string) error {
+func BuildArchive(root, src, target string) error {
 	cmd := exec.Command("go", "build",
 		"-buildmode=c-archive",
 		"-o",
 		target,
 		src)
+	const cflagsKey = "CGO_CFLAGS"
+	var cflagsValue string
+	envs := os.Environ()
+	for _, env := range envs {
+		keyvals := strings.Split(env, "=")
+		if len(keyvals) != 2 {
+			cmd.Env = append(cmd.Env, env)
+			continue
+		}
+		key, val := keyvals[0], keyvals[1]
+		if key != cflagsKey {
+			cmd.Env = append(cmd.Env, env)
+			continue
+		}
+		cflagsValue = val
+	}
+	cmd.Env = append(cmd.Env, cflagsKey+"="+cflagsValue+" -I "+root)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

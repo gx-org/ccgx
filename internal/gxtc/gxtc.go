@@ -249,7 +249,9 @@ func CompileCArchive(mod *gxmodule.Module, path string) error {
 	files := gxFiles{
 		mod: mod,
 		list: []string{
+			"google3/third_party/golang/github_com/gomlx/gopjrt/v/v0/pjrt/pjrt",
 			"github.com/gx-org/gx/golang/binder/cgx",
+			"github.com/gx-org/xlapjrt/cgx",
 		},
 	}
 	if err := filepath.WalkDir(mod.Root(), files.collectGXImports); err != nil {
@@ -259,6 +261,9 @@ func CompileCArchive(mod *gxmodule.Module, path string) error {
 	if err != nil {
 		return err
 	}
+	if err := gotc.ModTidy(); err != nil {
+		return err
+	}
 	filePath := filepath.Join(path, basename+".a")
-	return gotc.BuildArchive(src, filePath)
+	return gotc.BuildArchive(mod.Root(), src, filePath)
 }

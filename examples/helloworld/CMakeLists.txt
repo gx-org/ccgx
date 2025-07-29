@@ -9,6 +9,6 @@ include_directories (. gxdeps/github.com/gx-org/gx)
 
 add_executable (helloworld helloworld.cc)
 
-target_link_libraries (helloworld  ${CMAKE_SOURCE_DIR}/gxdeps/carchive.a absl_status absl_statusor)
+target_link_libraries (helloworld  ${CMAKE_SOURCE_DIR}/gxdeps/carchive.a $ENV{GOPJRT_INSTALL_DIR}/lib/libgomlx_xlabuilder.a absl_status absl_statusor)
 
 install (TARGETS helloworld DESTINATION bin)
