@@ -19,7 +19,7 @@ package carchive
 
 import (
 	"github.com/gx-org/ccgx/internal/gxtc"
-	gxmodule "github.com/gx-org/ccgx/internal/module"
+	gxmodule "github.com/gx-org/gx/build/module"
 	"github.com/spf13/cobra"
 )
 
@@ -38,9 +38,9 @@ func cArchive(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	depsPath, err := mod.DepsPath()
+	depsPath, err := gxtc.DepsPath(mod)
 	if err != nil {
 		return err
 	}
-	return gxtc.CompileCArchive(mod, depsPath, "carchive")
+	return gxtc.CompileCArchive(mod, depsPath)
 }

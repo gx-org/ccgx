@@ -4,7 +4,7 @@
 #include "gxdeps/github.com/gx-org/gx/golang/binder/ccgx/cppgx.h"
 #include "gxdeps/github.com/gx-org/gx/golang/binder/cgx/cgx.h"
 #include "gxdeps/github.com/gx-org/xlapjrt/cgx/cgx.cgo.h"
-#include "gxdeps/helloworld_go_gx.h"
+#include "gxdeps/helloworld.h"
 
 using gxlang::cppgx::Runtime;
 using gxlang::cppgx::ToErrorStatus;

@@ -17,7 +17,7 @@ package mod
 import (
 	"github.com/gx-org/ccgx/internal/gotc"
 	"github.com/gx-org/ccgx/internal/gxtc"
-	"github.com/gx-org/ccgx/internal/module"
+	"github.com/gx-org/gx/build/module"
 	"github.com/spf13/cobra"
 )
 

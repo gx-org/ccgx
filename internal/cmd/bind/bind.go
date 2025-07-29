@@ -16,11 +16,9 @@
 package bind
 
 import (
-	"path/filepath"
-
 	"github.com/gx-org/ccgx/internal/gotc"
 	"github.com/gx-org/ccgx/internal/gxtc"
-	gxmodule "github.com/gx-org/ccgx/internal/module"
+	gxmodule "github.com/gx-org/gx/build/module"
 	"github.com/spf13/cobra"
 )
 
@@ -52,15 +50,14 @@ func cBind(cmd *cobra.Command, args []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
-	depsPath, err := mod.DepsPath()
+	depsPath, err := gxtc.DepsPath(mod)
 	if err != nil {
 		return err
 	}
 	for _, pkg := range pkgs {
-		target := filepath.Join(depsPath, pkg)
-		if err := gxtc.Bind(mod, pkg, target); err != nil {
+		if err := gxtc.Bind(mod, pkg, depsPath); err != nil {
 			return err
 		}
 	}
-	return nil
+	return gxtc.CompileCArchive(mod, depsPath)
 }

@@ -32,8 +32,13 @@ import (
 	"github.com/gx-org/ccgx/internal/cmd/debug"
 	"github.com/gx-org/ccgx/internal/exec"
 	"github.com/gx-org/ccgx/internal/gotc"
-	gxmodule "github.com/gx-org/ccgx/internal/module"
-	"golang.org/x/mod/module"
+	"github.com/gx-org/gx/build/builder"
+	"github.com/gx-org/gx/build/importers"
+	"github.com/gx-org/gx/build/importers/localfs"
+	gxmodule "github.com/gx-org/gx/build/module"
+	"github.com/gx-org/gx/golang/binder/ccbindings"
+	"github.com/gx-org/gx/stdlib"
+	gomodule "golang.org/x/mod/module"
 )
 
 type gxFiles struct {
@@ -105,11 +110,37 @@ func Pack(mod *gxmodule.Module, path string) error {
 
 // Bind a GX package by generating C++ header files to a given target.
 func Bind(mod *gxmodule.Module, path, target string) error {
-	return gxCommand(mod, "github.com/gx-org/gx/golang/binder/genbind",
-		"--language=cc",
-		"--gx_package="+path,
-		"--target_folder="+target,
-	)
+	localImporter, err := localfs.NewWithModule(mod)
+	if err != nil {
+		return fmt.Errorf("cannot create local importer: %v", err)
+	}
+	bld := builder.New(importers.NewCacheLoader(
+		stdlib.Importer(nil),
+		localImporter,
+	))
+	pkg, err := bld.Build(path)
+	if err != nil {
+		return err
+	}
+	bnd, err := ccbindings.New(pkg.IR())
+	if err != nil {
+		return err
+	}
+	for _, binder := range bnd.Files() {
+		bindingPath := binder.BuildFilePath(target, pkg.IR())
+		if err := os.MkdirAll(filepath.Dir(bindingPath), 0755); err != nil {
+			return fmt.Errorf("cannot create target folder: %v", err)
+		}
+		f, err := os.Create(bindingPath)
+		if err != nil {
+			return fmt.Errorf("cannot create target file: %v", err)
+		}
+		defer f.Close()
+		if err := binder.WriteBindings(f); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func unique(ss []string) []string {
@@ -123,7 +154,7 @@ func unique(ss []string) []string {
 // Packages returns the list of GX packages in the current module.
 func Packages(mod *gxmodule.Module) ([]string, error) {
 	files := gxFiles{mod: mod}
-	if err := filepath.WalkDir(mod.Path(), files.collectGXDeps); err != nil {
+	if err := filepath.WalkDir(mod.Root(), files.collectGXDeps); err != nil {
 		return nil, err
 	}
 	pkgs := unique(files.list)
@@ -145,7 +176,7 @@ func PackAll(mod *gxmodule.Module) error {
 	return nil
 }
 
-func installLinkToModule(cache *gotc.Cache, targetPath string, dep *module.Version) error {
+func installLinkToModule(cache *gotc.Cache, targetPath string, dep *gomodule.Version) error {
 	gxModPath, err := cache.OSPath(dep)
 	if err != nil {
 		return err
@@ -163,13 +194,23 @@ func installLinkToModule(cache *gotc.Cache, targetPath string, dep *module.Versi
 	return os.Symlink(gxModPath, targetLink)
 }
 
+// DepsPath returns the path where dependencies are linked.
+// It is created if it does not exist.
+func DepsPath(mod *gxmodule.Module) (string, error) {
+	depsPath := filepath.Join(mod.Root(), "gxdeps")
+	if err := os.MkdirAll(depsPath, 0755); err != nil {
+		return "", err
+	}
+	return depsPath, nil
+}
+
 // LinkAllDeps creates links to dependencies.
 // Returns the path where the links where created.
 func LinkAllDeps(mod *gxmodule.Module, cache *gotc.Cache) error {
 	if err := gotc.ModTidy(); err != nil {
 		return err
 	}
-	depsPath, err := mod.DepsPath()
+	depsPath, err := DepsPath(mod)
 	if err != nil {
 		return err
 	}
@@ -200,22 +241,24 @@ func main() {}
 	return srcFile, os.WriteFile(srcFile, []byte(cArchiveSource), 0644)
 }
 
+const basename string = "carchive"
+
 // CompileCArchive creates a Go file with all the GX/Go dependencies and
 // a main function. This file is then compiled into a static binary C library.
-func CompileCArchive(mod *gxmodule.Module, path, name string) error {
+func CompileCArchive(mod *gxmodule.Module, path string) error {
 	files := gxFiles{
 		mod: mod,
 		list: []string{
 			"github.com/gx-org/gx/golang/binder/cgx",
 		},
 	}
-	if err := filepath.WalkDir(mod.Path(), files.collectGXImports); err != nil {
+	if err := filepath.WalkDir(mod.Root(), files.collectGXImports); err != nil {
 		return err
 	}
-	src, err := writeGoSource(path, name, &files)
+	src, err := writeGoSource(path, basename, &files)
 	if err != nil {
 		return err
 	}
-	filePath := filepath.Join(path, name+".a")
+	filePath := filepath.Join(path, basename+".a")
 	return gotc.BuildArchive(src, filePath)
 }

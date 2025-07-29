@@ -19,7 +19,7 @@ package link
 import (
 	"github.com/gx-org/ccgx/internal/gotc"
 	"github.com/gx-org/ccgx/internal/gxtc"
-	gxmodule "github.com/gx-org/ccgx/internal/module"
+	gxmodule "github.com/gx-org/gx/build/module"
 	"github.com/spf13/cobra"
 )
 
