@@ -1,4 +1,4 @@
-module helloworld
+module github.com/gx-org/ccgx/examples/helloworld
 
 go 1.24.4
 

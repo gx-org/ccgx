@@ -8,6 +8,8 @@ require (
 	golang.org/x/mod v0.26.0
 )
 
+replace github.com/gx-org/gx => ../../../copybara/gx
+
 require (
 	github.com/gx-org/backend v0.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

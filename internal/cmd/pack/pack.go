@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package carchive provides the Cobra carchive command.
-// The carchive command creates a carchive.go with all the Go/GX dependencies
-// to build a binary c archive that can be linked with the final executable.
-package carchive
+// Package bind provides the Cobra bind command
+package pack
 
 import (
 	"github.com/gx-org/ccgx/internal/gxtc"
@@ -26,17 +24,16 @@ import (
 // Cmd is the implementation of the mod command.
 func Cmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "carchive",
-		Short: "Create a c archive",
-		Long:  "First, create a carchive.go file which includes all the Go/GX dependencies and a main function. This file is then compile using `go build -buildmode=c-archive` to produce a binary static .a library file.",
-		RunE:  cArchive,
+		Use:   "pack",
+		Short: "Create go packages to store GX files",
+		RunE:  cPack,
 	}
 }
 
-func cArchive(cmd *cobra.Command, args []string) error {
+func cPack(cmd *cobra.Command, args []string) error {
 	mod, err := gxmodule.Current()
 	if err != nil {
 		return err
 	}
-	return gxtc.CompileCArchive(mod)
+	return gxtc.PackAll(mod)
 }

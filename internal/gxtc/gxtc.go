@@ -20,7 +20,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"log"
 	"maps"
 	"os"
 	"path/filepath"
@@ -29,8 +28,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gx-org/ccgx/internal/cmd/debug"
-	"github.com/gx-org/ccgx/internal/exec"
 	"github.com/gx-org/ccgx/internal/gotc"
 	"github.com/gx-org/gx/build/builder"
 	"github.com/gx-org/gx/build/importers"
@@ -50,10 +47,7 @@ type gxFiles struct {
 	list []string
 }
 
-func (fls *gxFiles) collectGXDeps(path string, dir fs.DirEntry, err error) error {
-	if err != nil {
-		return err
-	}
+func (fls *gxFiles) collectGXDeps(path string, dir fs.DirEntry) error {
 	if !strings.HasSuffix(path, ".gx") {
 		return nil
 	}
@@ -68,10 +62,7 @@ func (fls *gxFiles) collectGXDeps(path string, dir fs.DirEntry, err error) error
 	return nil
 }
 
-func (fls *gxFiles) collectGXImports(path string, dir fs.DirEntry, err error) error {
-	if err != nil {
-		return err
-	}
+func (fls *gxFiles) collectGXImports(path string, dir fs.DirEntry) error {
 	if !strings.HasSuffix(path, ".gx") {
 		return nil
 	}
@@ -90,25 +81,25 @@ func (fls *gxFiles) collectGXImports(path string, dir fs.DirEntry, err error) er
 	return nil
 }
 
-func gxCommand(mod *gxmodule.Module, gxcmd string, args ...string) error {
-	version := mod.VersionOf("github.com/gx-org/gx")
-	if version == "" {
-		version = "latest"
+func (fls *gxFiles) walk(fn func(path string, dir fs.DirEntry) error) error {
+	depsPath, err := DepsPath(fls.mod)
+	if err != nil {
+		return err
 	}
-	osArgs := []string{"run", gxcmd + "@" + version}
-	osArgs = append(osArgs, args...)
-	if debug.Debug {
-		cmdS := append([]string{"DEBUG", "go"}, osArgs...)
-		log.Println(strings.Join(cmdS, " "))
+	walker := func(path string, dir fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasPrefix(path, depsPath) {
+			return nil
+		}
+		return fn(path, dir)
 	}
-	cmd := exec.Command("go", osArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return filepath.WalkDir(fls.mod.Root(), walker)
 }
 
-// Pack a GX package.
-func Pack(mod *gxmodule.Module, targetRoot string, pkgPath string) error {
+// packPackage a GX package.
+func packPackage(mod *gxmodule.Module, targetRoot string, pkgPath string) error {
 	pkgInfo, err := pkginfo.Load(mod, pkgPath)
 	if err != nil {
 		return err
@@ -150,7 +141,7 @@ add_library (%s_bindings STATIC ${CMAKE_CURRENT_LIST_DIR}/%s)
 
 // WriteCMakeLists writes CMakeLists.txt for a given package.
 func WriteCMakeLists(target string, pkg *ir.Package, headerPath, ccPath string) error {
-	path := filepath.Join(target, "CMakeLists.txt")
+	path := filepath.Join(filepath.Dir(ccPath), "CMakeLists.txt")
 	text := fmt.Sprintf(cmakeSource,
 		pkg.Name.Name,
 		pkg.Name.Name,
@@ -175,8 +166,19 @@ func writeBinderSourceFile(binder bindings.File, target string, pkg *ir.Package)
 	return bindingPath, nil
 }
 
-// Bind a GX package by generating C++ header files to a given target.
-func Bind(mod *gxmodule.Module, path, target string, fs ...BinderCallback) error {
+// BindAll writes C++ bindings for all C++ packages.
+func BindAll(mod *gxmodule.Module, fs []BinderCallback) error {
+	pkgs, err := Packages(mod)
+	if err != nil {
+		return err
+	}
+	if len(pkgs) == 0 {
+		return nil
+	}
+	depsPath, err := DepsPath(mod)
+	if err != nil {
+		return err
+	}
 	localImporter, err := localfs.NewWithModule(mod)
 	if err != nil {
 		return fmt.Errorf("cannot create local importer: %v", err)
@@ -185,25 +187,34 @@ func Bind(mod *gxmodule.Module, path, target string, fs ...BinderCallback) error
 		stdlib.Importer(nil),
 		localImporter,
 	))
-	pkg, err := bld.Build(path)
-	if err != nil {
-		return err
+	for _, pkgPath := range pkgs {
+		pkg, err := bld.Build(pkgPath)
+		if err != nil {
+			return fmt.Errorf("cannot build GX package %s:\n%v\n", pkgPath, err)
+		}
+		if err := bind(mod, pkg.IR(), depsPath, fs...); err != nil {
+			return fmt.Errorf("cannot bind package %s: %v", pkg, err)
+		}
 	}
-	bnd, err := ccbindings.New(pkg.IR())
+	return nil
+}
+
+func bind(mod *gxmodule.Module, pkg *ir.Package, depsPath string, fs ...BinderCallback) error {
+	bnd, err := ccbindings.New(pkg)
 	if err != nil {
 		return err
 	}
 	ccFiles := bnd.Files()
-	headerPath, err := writeBinderSourceFile(ccFiles[0], target, pkg.IR())
+	headerPath, err := writeBinderSourceFile(ccFiles[0], depsPath, pkg)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot write header file %s: %v", depsPath, err)
 	}
-	ccPath, err := writeBinderSourceFile(ccFiles[1], target, pkg.IR())
+	ccPath, err := writeBinderSourceFile(ccFiles[1], depsPath, pkg)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot write cc source file %s: %v", depsPath, err)
 	}
 	for _, f := range fs {
-		if err := f(target, pkg.IR(), headerPath, ccPath); err != nil {
+		if err := f(depsPath, pkg, headerPath, ccPath); err != nil {
 			return err
 		}
 	}
@@ -221,7 +232,7 @@ func unique(ss []string) []string {
 // Packages returns the list of GX packages in the current module.
 func Packages(mod *gxmodule.Module) ([]string, error) {
 	files := gxFiles{mod: mod}
-	if err := filepath.WalkDir(mod.Root(), files.collectGXDeps); err != nil {
+	if err := files.walk(files.collectGXDeps); err != nil {
 		return nil, err
 	}
 	pkgs := unique(files.list)
@@ -241,7 +252,7 @@ func PackAll(mod *gxmodule.Module) error {
 	}
 	packagerRoot = filepath.Join(packagerRoot, "packager")
 	for _, pkg := range pkgs {
-		if err := Pack(mod, packagerRoot, pkg); err != nil {
+		if err := packPackage(mod, packagerRoot, pkg); err != nil {
 			return err
 		}
 	}
@@ -307,8 +318,6 @@ func writeGoSource(path, name string, files *gxFiles) (string, error) {
 
 %s
 
-import _ "helloworld/gxdeps/packager/helloworld"
-
 import "fmt"
 
 import "C"
@@ -328,7 +337,7 @@ const basename string = "carchive"
 
 // CompileCArchive creates a Go file with all the GX/Go dependencies and
 // a main function. This file is then compiled into a static binary C library.
-func CompileCArchive(mod *gxmodule.Module, path string) error {
+func CompileCArchive(mod *gxmodule.Module) error {
 	files := gxFiles{
 		mod: mod,
 		list: []string{
@@ -337,7 +346,11 @@ func CompileCArchive(mod *gxmodule.Module, path string) error {
 			"github.com/gx-org/xlapjrt/cgx",
 		},
 	}
-	if err := filepath.WalkDir(mod.Root(), files.collectGXImports); err != nil {
+	if err := files.walk(files.collectGXImports); err != nil {
+		return err
+	}
+	path, err := DepsPath(mod)
+	if err != nil {
 		return err
 	}
 	src, err := writeGoSource(path, basename, &files)

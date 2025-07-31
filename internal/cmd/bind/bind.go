@@ -47,27 +47,14 @@ func cBind(cmd *cobra.Command, args []string) error {
 	if err := gxtc.LinkAllDeps(mod, cache); err != nil {
 		return err
 	}
-	pkgs, err := gxtc.Packages(mod)
-	if err != nil {
-		return err
-	}
-	if len(pkgs) == 0 {
-		return nil
-	}
-	depsPath, err := gxtc.DepsPath(mod)
-	if err != nil {
-		return err
-	}
 	var fs []gxtc.BinderCallback
 	if cmake {
 		fs = append(fs, gxtc.WriteCMakeLists)
 	}
-	for _, pkg := range pkgs {
-		if err := gxtc.Bind(mod, pkg, depsPath, fs...); err != nil {
-			return err
-		}
+	if err := gxtc.BindAll(mod, fs); err != nil {
+		return err
 	}
-	if err := gxtc.CompileCArchive(mod, depsPath); err != nil {
+	if err := gxtc.CompileCArchive(mod); err != nil {
 		return err
 	}
 	return nil

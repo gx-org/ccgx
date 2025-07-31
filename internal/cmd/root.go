@@ -20,6 +20,7 @@ import (
 	"github.com/gx-org/ccgx/internal/cmd/debug"
 	"github.com/gx-org/ccgx/internal/cmd/link"
 	"github.com/gx-org/ccgx/internal/cmd/mod"
+	"github.com/gx-org/ccgx/internal/cmd/pack"
 	"github.com/spf13/cobra"
 )
 
@@ -41,4 +42,5 @@ func init() {
 	rootCmd.AddCommand(link.Cmd())
 	rootCmd.AddCommand(bind.Cmd())
 	rootCmd.AddCommand(carchive.Cmd())
+	rootCmd.AddCommand(pack.Cmd())
 }

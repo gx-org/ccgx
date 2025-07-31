@@ -5,7 +5,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/gxdeps")
 include_directories (. gxdeps/github.com/gx-org/gx)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/gxdeps/github.com/gx-org/gx/golang/binder/ccgx/CMakeLists.txt)
-include(${CMAKE_CURRENT_SOURCE_DIR}/gxdeps/CMakeLists.txt)
+include(${CMAKE_CURRENT_SOURCE_DIR}/gxdeps/github.com/gx-org/ccgx/examples/helloworld/CMakeLists.txt)
 
 add_executable (helloworld helloworld.cc)
 
