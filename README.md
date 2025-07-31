@@ -14,7 +14,7 @@
     $ export GOPJRT_INSTALL_DIR=$HOME/gopjrtbin
     $ curl -sSf https://raw.githubusercontent.com/gomlx/gopjrt/main/cmd/install_linux_amd64.sh | bash
     ```
-    Note that `GOPJRT_INSTALL_DIR` is going to be used later in `CMakeLists.txt`. (Check the [install_linux_amd64.sh](https://github.com/gomlx/gopjrt/blob/main/cmd/install_linux_amd64.sh)).
+    Note that `GOPJRT_INSTALL_DIR` is going to be used later in `CMakeLists.txt`. 
 
 ## Running `helloworld`
 
