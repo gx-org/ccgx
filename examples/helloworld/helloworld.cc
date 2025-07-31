@@ -11,7 +11,12 @@ using gxlang::cppgx::ToErrorStatus;
 using helloworld::Helloworld;
 using std::begin;
 
+extern "C" {
+void InitModuleHelloworld();
+}
+
 absl::StatusOr<Runtime> NewRuntime() {
+  InitModuleHelloworld();
   const auto bld(cgx_builder_new_static_xlapjrt());
   const auto result(cgx_runtime_new_xlapjrt(bld, "cpu"));
   if (result.error != cgx_error{}) {

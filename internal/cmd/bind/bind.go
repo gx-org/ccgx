@@ -22,13 +22,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var cmake bool
+
 // Cmd is the implementation of the mod command.
 func Cmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "bind",
 		Short: "Create links to dependencies, then generate C++ header files",
 		RunE:  cBind,
 	}
+	cmd.PersistentFlags().BoolVarP(&cmake, "cmake", "", false, "generate CMakeLists.txt")
+	return cmd
 }
 
 func cBind(cmd *cobra.Command, args []string) error {
@@ -54,10 +58,17 @@ func cBind(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	var fs []gxtc.BinderCallback
+	if cmake {
+		fs = append(fs, gxtc.WriteCMakeLists)
+	}
 	for _, pkg := range pkgs {
-		if err := gxtc.Bind(mod, pkg, depsPath); err != nil {
+		if err := gxtc.Bind(mod, pkg, depsPath, fs...); err != nil {
 			return err
 		}
 	}
-	return gxtc.CompileCArchive(mod, depsPath)
+	if err := gxtc.CompileCArchive(mod, depsPath); err != nil {
+		return err
+	}
+	return nil
 }

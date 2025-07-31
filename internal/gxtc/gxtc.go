@@ -35,7 +35,9 @@ import (
 	"github.com/gx-org/gx/build/builder"
 	"github.com/gx-org/gx/build/importers"
 	"github.com/gx-org/gx/build/importers/localfs"
+	"github.com/gx-org/gx/build/ir"
 	gxmodule "github.com/gx-org/gx/build/module"
+	"github.com/gx-org/gx/golang/binder/bindings"
 	"github.com/gx-org/gx/golang/binder/ccbindings"
 	"github.com/gx-org/gx/stdlib"
 	gomodule "golang.org/x/mod/module"
@@ -108,8 +110,47 @@ func Pack(mod *gxmodule.Module, path string) error {
 	return gxCommand(mod, "github.com/gx-org/gx/golang/packager", "--gx_package_module="+path)
 }
 
+// BinderCallback is a function called after bindings have been generated for a package.
+type BinderCallback func(target string, pkg *ir.Package, headerPath, ccPath string) error
+
+const cmakeSource = `
+cmake_minimum_required (VERSION 3.24)
+project (%s_bindings)
+
+include_directories (${CMAKE_CURRENT_LIST_DIR}/../../..)
+
+add_library (%s_bindings STATIC ${CMAKE_CURRENT_LIST_DIR}/%s)
+`
+
+// WriteCMakeLists writes CMakeLists.txt for a given package.
+func WriteCMakeLists(target string, pkg *ir.Package, headerPath, ccPath string) error {
+	path := filepath.Join(target, "CMakeLists.txt")
+	text := fmt.Sprintf(cmakeSource,
+		pkg.Name.Name,
+		pkg.Name.Name,
+		filepath.Base(ccPath),
+	)
+	return os.WriteFile(path, []byte(text), 0755)
+}
+
+func writeBinderSourceFile(binder bindings.File, target string, pkg *ir.Package) (string, error) {
+	bindingPath := binder.BuildFilePath(target, pkg)
+	if err := os.MkdirAll(filepath.Dir(bindingPath), 0755); err != nil {
+		return "", fmt.Errorf("cannot create target folder: %v", err)
+	}
+	f, err := os.Create(bindingPath)
+	if err != nil {
+		return "", fmt.Errorf("cannot create target file: %v", err)
+	}
+	defer f.Close()
+	if err := binder.WriteBindings(f); err != nil {
+		return "", err
+	}
+	return bindingPath, nil
+}
+
 // Bind a GX package by generating C++ header files to a given target.
-func Bind(mod *gxmodule.Module, path, target string) error {
+func Bind(mod *gxmodule.Module, path, target string, fs ...BinderCallback) error {
 	localImporter, err := localfs.NewWithModule(mod)
 	if err != nil {
 		return fmt.Errorf("cannot create local importer: %v", err)
@@ -126,17 +167,17 @@ func Bind(mod *gxmodule.Module, path, target string) error {
 	if err != nil {
 		return err
 	}
-	for _, binder := range bnd.Files() {
-		bindingPath := binder.BuildFilePath(target, pkg.IR())
-		if err := os.MkdirAll(filepath.Dir(bindingPath), 0755); err != nil {
-			return fmt.Errorf("cannot create target folder: %v", err)
-		}
-		f, err := os.Create(bindingPath)
-		if err != nil {
-			return fmt.Errorf("cannot create target file: %v", err)
-		}
-		defer f.Close()
-		if err := binder.WriteBindings(f); err != nil {
+	ccFiles := bnd.Files()
+	headerPath, err := writeBinderSourceFile(ccFiles[0], target, pkg.IR())
+	if err != nil {
+		return err
+	}
+	ccPath, err := writeBinderSourceFile(ccFiles[1], target, pkg.IR())
+	if err != nil {
+		return err
+	}
+	for _, f := range fs {
+		if err := f(target, pkg.IR(), headerPath, ccPath); err != nil {
 			return err
 		}
 	}
@@ -234,6 +275,17 @@ func writeGoSource(path, name string, files *gxFiles) (string, error) {
 	cArchiveSource := fmt.Sprintf(`package main
 
 %s
+
+import _ "helloworld/gxdeps/packager/helloworld"
+
+import "fmt"
+
+import "C"
+
+//export InitModuleHelloworld
+func InitModuleHelloworld() {
+	fmt.Println("Hello from here")
+}
 
 func main() {}
 `, imports.String())

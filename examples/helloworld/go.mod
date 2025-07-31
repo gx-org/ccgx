@@ -3,7 +3,7 @@ module helloworld
 go 1.24.4
 
 require (
-	github.com/gx-org/gx v0.5.0
+	github.com/gx-org/gx v0.5.2
 	github.com/gx-org/xlapjrt v0.2.3
 )
 
