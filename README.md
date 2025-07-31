@@ -12,8 +12,10 @@
 ## Running `helloworld`
 
 1. Create the project folder: 
+    ```
     $ mkdir helloworld
     $ cd helloworld
+    ```
 2. Create a minimal `helloworld.gx` file such as:
     package helloworld
     
