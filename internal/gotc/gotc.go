@@ -94,12 +94,7 @@ func (cache *Cache) OSPath(mod *module.Version) (string, error) {
 	return modCache, nil
 }
 
-func BuildArchive(root, src, target string) error {
-	cmd := exec.Command("go", "build",
-		"-buildmode=c-archive",
-		"-o",
-		target,
-		src)
+func runCGOCommand(root string, cmd *exec.Cmd) error {
 	const cflagsKey = "CGO_CFLAGS"
 	var cflagsValue string
 	envs := os.Environ()
@@ -120,4 +115,18 @@ func BuildArchive(root, src, target string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func BuildCGoHeader(root, src, target string) error {
+	return runCGOCommand(root, exec.Command("go", "tool", "cgo",
+		"-exportheader", target,
+		src))
+}
+
+func BuildArchive(root, src, target string) error {
+	return runCGOCommand(root, exec.Command("go", "build",
+		"-buildmode=c-archive",
+		"-o",
+		target,
+		src))
 }

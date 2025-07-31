@@ -3,7 +3,7 @@ module github.com/gx-org/ccgx/examples/helloworld
 go 1.24.4
 
 require (
-	github.com/gx-org/gx v0.5.2
+	github.com/gx-org/gx v0.6.1
 	github.com/gx-org/xlapjrt v0.2.3
 )
 

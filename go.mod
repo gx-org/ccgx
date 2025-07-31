@@ -3,12 +3,10 @@ module github.com/gx-org/ccgx
 go 1.24.4
 
 require (
-	github.com/gx-org/gx v0.5.0
+	github.com/gx-org/gx v0.6.1
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/mod v0.26.0
 )
-
-replace github.com/gx-org/gx => ../../../copybara/gx
 
 require (
 	github.com/gx-org/backend v0.3.0 // indirect

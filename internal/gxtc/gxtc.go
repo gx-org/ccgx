@@ -240,6 +240,8 @@ func Packages(mod *gxmodule.Module) ([]string, error) {
 	return pkgs, nil
 }
 
+const packagerFolderName = "packager"
+
 // PackAll looks for all GX packages and generates a matching Go package to encapsulte the GX source code.
 func PackAll(mod *gxmodule.Module) error {
 	pkgs, err := Packages(mod)
@@ -250,7 +252,7 @@ func PackAll(mod *gxmodule.Module) error {
 	if err != nil {
 		return err
 	}
-	packagerRoot = filepath.Join(packagerRoot, "packager")
+	packagerRoot = filepath.Join(packagerRoot, packagerFolderName)
 	for _, pkg := range pkgs {
 		if err := packPackage(mod, packagerRoot, pkg); err != nil {
 			return err
@@ -277,10 +279,12 @@ func installLinkToModule(cache *gotc.Cache, targetPath string, dep *gomodule.Ver
 	return os.Symlink(gxModPath, targetLink)
 }
 
+const gxdepsFolderName = "gxdeps"
+
 // DepsPath returns the path where dependencies are linked.
 // It is created if it does not exist.
 func DepsPath(mod *gxmodule.Module) (string, error) {
-	depsPath := filepath.Join(mod.Root(), "gxdeps")
+	depsPath := filepath.Join(mod.Root(), gxdepsFolderName)
 	if err := os.MkdirAll(depsPath, 0755); err != nil {
 		return "", err
 	}
@@ -305,7 +309,37 @@ func LinkAllDeps(mod *gxmodule.Module, cache *gotc.Cache) error {
 	return err
 }
 
-func writeGoSource(path, name string, files *gxFiles) (string, error) {
+func listGoPackager(mod *gxmodule.Module) ([]string, error) {
+	gxPackages, err := Packages(mod)
+	if err != nil {
+		return nil, err
+	}
+	packagers := make([]string, len(gxPackages))
+	for i, gxPkg := range gxPackages {
+		packagers[i] = (mod.Name() + "/" +
+			gxdepsFolderName + "/" +
+			packagerFolderName + "/" +
+			gxPkg)
+	}
+	return packagers, nil
+}
+
+func writeGoSource(mod *gxmodule.Module, path, name string) (string, error) {
+	files := gxFiles{
+		mod: mod,
+		list: []string{
+			"github.com/gx-org/gx/golang/binder/cgx",
+			"github.com/gx-org/xlapjrt/cgx",
+		},
+	}
+	if err := files.walk(files.collectGXImports); err != nil {
+		return "", err
+	}
+	goPackagers, err := listGoPackager(mod)
+	if err != nil {
+		return "", err
+	}
+	files.list = append(files.list, goPackagers...)
 	deps := unique(files.list)
 	var imports strings.Builder
 	for _, dep := range deps {
@@ -318,13 +352,13 @@ func writeGoSource(path, name string, files *gxFiles) (string, error) {
 
 %s
 
-import "fmt"
-
 import "C"
 
-//export InitModuleHelloworld
-func InitModuleHelloworld() {
-	fmt.Println("Hello from here")
+import "github.com/gx-org/gx/build/importers/embedpkg"
+		
+//export InitGX
+func InitGX() {
+	embedpkg.New()
 }
 
 func main() {}
@@ -338,28 +372,21 @@ const basename string = "carchive"
 // CompileCArchive creates a Go file with all the GX/Go dependencies and
 // a main function. This file is then compiled into a static binary C library.
 func CompileCArchive(mod *gxmodule.Module) error {
-	files := gxFiles{
-		mod: mod,
-		list: []string{
-			"google3/third_party/golang/github_com/gomlx/gopjrt/v/v0/pjrt/pjrt",
-			"github.com/gx-org/gx/golang/binder/cgx",
-			"github.com/gx-org/xlapjrt/cgx",
-		},
-	}
-	if err := files.walk(files.collectGXImports); err != nil {
-		return err
-	}
 	path, err := DepsPath(mod)
 	if err != nil {
 		return err
 	}
-	src, err := writeGoSource(path, basename, &files)
+	src, err := writeGoSource(mod, path, basename)
 	if err != nil {
 		return err
 	}
 	if err := gotc.ModTidy(); err != nil {
 		return err
 	}
-	filePath := filepath.Join(path, basename+".a")
-	return gotc.BuildArchive(mod.Root(), src, filePath)
+	cArchivePath := filepath.Join(path, basename+".a")
+	if err := gotc.BuildArchive(mod.Root(), src, cArchivePath); err != nil {
+		return err
+	}
+	cHeaderPath := filepath.Join(path, basename+".h")
+	return gotc.BuildCGoHeader(mod.Root(), src, cHeaderPath)
 }

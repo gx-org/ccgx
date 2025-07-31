@@ -1,6 +1,7 @@
 #include <absl/status/statusor.h>
 #include <iostream>
 
+#include "gxdeps/carchive.h"
 #include "gxdeps/github.com/gx-org/ccgx/examples/helloworld/helloworld.h"
 #include "gxdeps/github.com/gx-org/gx/golang/binder/ccgx/cppgx.h"
 #include "gxdeps/github.com/gx-org/gx/golang/binder/cgx/cgx.h"
@@ -11,12 +12,7 @@ using gxlang::cppgx::Runtime;
 using gxlang::cppgx::ToErrorStatus;
 using std::begin;
 
-extern "C" {
-void InitModuleHelloworld();
-}
-
 absl::StatusOr<Runtime> NewRuntime() {
-  InitModuleHelloworld();
   const auto bld(cgx_builder_new_static_xlapjrt());
   const auto result(cgx_runtime_new_xlapjrt(bld, "cpu"));
   if (result.error != cgx_error{}) {
@@ -26,6 +22,7 @@ absl::StatusOr<Runtime> NewRuntime() {
 }
 
 int main() {
+  InitGX();
   auto runtime(NewRuntime());
   if (!runtime.ok()) {
     std::cerr << "cannot create runtime: " << runtime.status() << std::endl;
