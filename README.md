@@ -4,7 +4,9 @@
 
 1. Install a recent version of Go (see [All Releases](https://go.dev/dl/))
 2. Install `ccgx` using the following command:
-    $ GOBIN=<target folder> go install github.com/gx-org/ccgx@latest
+  ```
+  $ GOBIN=<target folder> go install github.com/gx-org/ccgx@latest
+  ```
    (if `GOBIN` is not specified, the default is `~/go/bin/ccgx`)
 
 ## Running `helloworld`
