@@ -17,6 +17,7 @@
     $ cd helloworld
     ```
 2. Create a minimal `helloworld.gx` file such as:
+    ```go
     package helloworld
     
     import _ "github.com/gx-org/xlapjrt/gx"
@@ -28,8 +29,11 @@
     		{4, 5, 6},
     	}
     }
+    ```
 3. Run 
+    ```
     $ ccgx init 
+    ```
    at the top of the project to create `go.mod`. `go.mod` manages all the dependencies of the project and their versions for reproducable builds.
 
 ## Disclaimer
