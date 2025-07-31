@@ -8,8 +8,17 @@
     $ GOBIN=<target folder> go install github.com/gx-org/ccgx@latest
     ```
    (if `GOBIN` is not specified, the default is `~/go/bin/ccgx`)
+3. Install [gopjrt](https://github.com/gomlx/gopjrt), the XLA backend used by GX:
+    ```
+    $ export GOPJRT_NOSUDO=true
+    $ export GOPJRT_INSTALL_DIR=$HOME/gopjrtbin
+    $ curl -sSf https://raw.githubusercontent.com/gomlx/gopjrt/main/cmd/install_linux_amd64.sh | bash
+    ```
+    Note that `GOPJRT_INSTALL_DIR` is going to be used later in `CMakeLists.txt`. (Check the [install_linux_amd64.sh](https://github.com/gomlx/gopjrt/blob/main/cmd/install_linux_amd64.sh)).
 
 ## Running `helloworld`
+
+This example explains how to run the example in [ccgx/examples/helloworld](https://github.com/gx-org/ccgx/blob/main/examples/helloworld).
 
 1. Create the project folder: 
     ```
@@ -30,11 +39,29 @@
     	}
     }
     ```
-3. Run 
+    Note the `import` which adds a dependency to the XLA backend. See [ccgx/examples/helloworld/helloworld.gx](https://github.com/gx-org/ccgx/blob/main/examples/helloworld/helloworld.gx) as a reference.
+3. Run the following command to create `go.mod` and `go.sum`:
     ```
-    $ ccgx init 
+    $ ccgx mod init helloworld
     ```
-   at the top of the project to create `go.mod`. `go.mod` manages all the dependencies of the project and their versions for reproducable builds.
+   These files manage all the dependencies of the project and their versions for reproducable builds. After new dependencies are added or removed in GX source files, run:
+    ```
+    $ ccgx mod tidy 
+    ```
+   to update `go.mod` from the latest imports in the GX source files.
+4. Run the following command to generate a corresponding C++ source and header files:
+    ```
+    $ ccgx bind
+    ```
+   The files are generated in the `gxdeps` folder.
+5. Create the C++ file [helloworld.cc](https://github.com/gx-org/ccgx/blob/main/examples/helloworld/helloworld.cc) and its [CMakeLists.txt](https://github.com/gx-org/ccgx/blob/main/examples/helloworld/CMakeLists.txt)
+6. Compile and run the project with `cmake`:
+    ```
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ ./helloworld
+    ```
 
 ## Disclaimer
 
