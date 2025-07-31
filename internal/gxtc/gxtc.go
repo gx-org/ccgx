@@ -39,6 +39,8 @@ import (
 	gxmodule "github.com/gx-org/gx/build/module"
 	"github.com/gx-org/gx/golang/binder/bindings"
 	"github.com/gx-org/gx/golang/binder/ccbindings"
+	"github.com/gx-org/gx/golang/packager/goembed"
+	"github.com/gx-org/gx/golang/packager/pkginfo"
 	"github.com/gx-org/gx/stdlib"
 	gomodule "golang.org/x/mod/module"
 )
@@ -106,8 +108,32 @@ func gxCommand(mod *gxmodule.Module, gxcmd string, args ...string) error {
 }
 
 // Pack a GX package.
-func Pack(mod *gxmodule.Module, path string) error {
-	return gxCommand(mod, "github.com/gx-org/gx/golang/packager", "--gx_package_module="+path)
+func Pack(mod *gxmodule.Module, targetRoot string, pkgPath string) error {
+	pkgInfo, err := pkginfo.Load(mod, pkgPath)
+	if err != nil {
+		return err
+	}
+	pkgPaths := strings.Split(pkgPath, "/")
+	targetFolder := filepath.Join(targetRoot, filepath.Join(pkgPaths...))
+	targetFile := filepath.Join(targetFolder, pkgInfo.GoPackageName()+"_gx.go")
+	if err := os.MkdirAll(filepath.Dir(targetFile), os.ModePerm); err != nil {
+		return err
+	}
+	w, err := os.Create(targetFile)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	if err := goembed.Write(w, pkgInfo); err != nil {
+		return err
+	}
+	for _, gxSrc := range pkgInfo.SourceFiles() {
+		gxDst := filepath.Join(targetFolder, filepath.Base(gxSrc))
+		if err := copy(gxSrc, gxDst); err != nil {
+			return err
+		}
+	}
+	return err
 }
 
 // BinderCallback is a function called after bindings have been generated for a package.
@@ -209,8 +235,13 @@ func PackAll(mod *gxmodule.Module) error {
 	if err != nil {
 		return err
 	}
+	packagerRoot, err := DepsPath(mod)
+	if err != nil {
+		return err
+	}
+	packagerRoot = filepath.Join(packagerRoot, "packager")
 	for _, pkg := range pkgs {
-		if err := Pack(mod, pkg); err != nil {
+		if err := Pack(mod, packagerRoot, pkg); err != nil {
 			return err
 		}
 	}
