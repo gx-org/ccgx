@@ -342,8 +342,9 @@ func writeGoSource(mod *gxmodule.Module, path, name string) (string, error) {
 	files.list = append(files.list, goPackagers...)
 	deps := unique(files.list)
 	var imports strings.Builder
+	std := stdlib.Importer(nil)
 	for _, dep := range deps {
-		if !strings.HasPrefix(dep, "github.com") {
+		if std.Support(dep) {
 			continue
 		}
 		fmt.Fprintf(&imports, "import _ %s\n", strconv.Quote(dep))
