@@ -12,6 +12,8 @@
     ```
     $ export GOPJRT_NOSUDO=true
     $ export GOPJRT_INSTALL_DIR=$HOME/gopjrtbin
+    $ export CGO_CFLAGS="-I $GOPJRT_INSTALL_DIR/include"
+    $ export LD_LIBRARY_PATH=$GOPJRT_INSTALL_DIR/lib
     $ curl -sSf https://raw.githubusercontent.com/gomlx/gopjrt/main/cmd/install_linux_amd64.sh | bash
     ```
     Note that `GOPJRT_INSTALL_DIR` is going to be used later in `CMakeLists.txt`. 
@@ -51,7 +53,7 @@ This example explains how to run the example in [ccgx/examples/helloworld](https
    to update `go.mod` from the latest imports in the GX source files.
 4. Run the following command to generate a corresponding C++ source and header files:
     ```
-    $ ccgx bind
+    $ ccgx bind --cmake
     ```
    The files are generated in the `gxdeps` folder.
 5. Create the C++ file [helloworld.cc](https://github.com/gx-org/ccgx/blob/main/examples/helloworld/helloworld.cc) and its [CMakeLists.txt](https://github.com/gx-org/ccgx/blob/main/examples/helloworld/CMakeLists.txt)
@@ -60,6 +62,7 @@ This example explains how to run the example in [ccgx/examples/helloworld](https
     $ mkdir build
     $ cd build
     $ cmake ..
+    $ make
     $ ./helloworld
     ```
 
