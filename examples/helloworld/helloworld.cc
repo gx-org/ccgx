@@ -2,14 +2,14 @@
 #include <iostream>
 
 #include "gxdeps/carchive.h"
-#include "gxdeps/github.com/gx-org/ccgx/examples/helloworld/helloworld.h"
 #include "gxdeps/github.com/gx-org/gx/golang/binder/ccgx/cppgx.h"
 #include "gxdeps/github.com/gx-org/gx/golang/binder/cgx/cgx.h"
 #include "gxdeps/github.com/gx-org/xlapjrt/cgx/cgx.cgo.h"
+#include "gxdeps/helloworld/helloworld.h"
 
-using github_com::gx_org::ccgx::examples::helloworld::Helloworld;
 using gxlang::cppgx::Runtime;
 using gxlang::cppgx::ToErrorStatus;
+using helloworld::Helloworld;
 using std::begin;
 
 absl::StatusOr<Runtime> NewRuntime() {
